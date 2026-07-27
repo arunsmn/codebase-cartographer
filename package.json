@@ -1,6 +1,7 @@
 {
   "name": "codebase-cartographer",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.15.1",
   "private": true,
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -18,7 +19,8 @@
   "dependencies": {
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
