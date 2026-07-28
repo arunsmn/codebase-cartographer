@@ -10,6 +10,7 @@ const IGNORED_DIRECTORIES = [
   "coverage/",
 ];
 
+const ALWAYS_INCLUDED_FILENAMES = ["tsconfig.json", "jsconfig.json"];
 const SUPPORTED_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
 
 const MAX_FILE_SIZE_BYTES = 200_000; // 200 KB — generous for source files, excludes bundled/minified junk
@@ -27,7 +28,14 @@ export function filterRelevantFiles(
     ) {
       return false;
     }
-    if (!SUPPORTED_EXTENSIONS.some((ext) => entry.path.endsWith(ext))) {
+
+    const basename = entry.path.split("/").pop() ?? "";
+    const isAlwaysIncluded = ALWAYS_INCLUDED_FILENAMES.includes(basename);
+    const hasSupportedExtension = SUPPORTED_EXTENSIONS.some((ext) =>
+      entry.path.endsWith(ext),
+    );
+
+    if (!isAlwaysIncluded && !hasSupportedExtension) {
       return false;
     }
     if (entry.size !== undefined && entry.size > MAX_FILE_SIZE_BYTES) {
