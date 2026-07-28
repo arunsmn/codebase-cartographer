@@ -14,10 +14,28 @@ export interface LayoutResult {
   edges: GraphEdge[];
 }
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 50;
+const NODE_HEIGHT = 56;
+const MIN_NODE_WIDTH = 180;
+const MAX_NODE_WIDTH = 320;
+const PRIMARY_CHAR_WIDTH = 7.8;
+const SECONDARY_CHAR_WIDTH = 6.6;
+const HORIZONTAL_PADDING = 32;
 const NODE_SEPARATION = 40;
-const RANK_SEPARATION = 80;
+const RANK_SEPARATION = 100;
+
+function estimateNodeWidth(filePath: string): number {
+  const lastSlash = filePath.lastIndexOf("/");
+  const basename = lastSlash === -1 ? filePath : filePath.slice(lastSlash + 1);
+  const dirname = lastSlash === -1 ? "" : filePath.slice(0, lastSlash);
+
+  const estimated =
+    Math.max(
+      basename.length * PRIMARY_CHAR_WIDTH,
+      dirname.length * SECONDARY_CHAR_WIDTH,
+    ) + HORIZONTAL_PADDING;
+
+  return Math.min(MAX_NODE_WIDTH, Math.max(MIN_NODE_WIDTH, estimated));
+}
 
 export function computeLayout(graph: DependencyGraph): LayoutResult {
   const g = new dagre.graphlib.Graph();
@@ -29,7 +47,10 @@ export function computeLayout(graph: DependencyGraph): LayoutResult {
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of graph.nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    g.setNode(node.id, {
+      width: estimateNodeWidth(node.id),
+      height: NODE_HEIGHT,
+    });
   }
   for (const edge of graph.edges) {
     g.setEdge(edge.from, edge.to);
