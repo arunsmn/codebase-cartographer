@@ -1,8 +1,6 @@
-export interface ImportEdge {
-  from: string;
-  to: string;
-}
+import type { GraphEdge } from "@/core/graph/types";
 
+export type ImportEdge = GraphEdge;
 export interface ParseResult {
   edges: ImportEdge[];
   unresolvedImports: string[];
