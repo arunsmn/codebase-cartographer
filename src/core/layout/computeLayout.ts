@@ -17,9 +17,9 @@ export interface LayoutResult {
 const NODE_HEIGHT = 56;
 const MIN_NODE_WIDTH = 180;
 const MAX_NODE_WIDTH = 320;
-const PRIMARY_CHAR_WIDTH = 7.8;
+const PRIMARY_CHAR_WIDTH = 8.6;
 const SECONDARY_CHAR_WIDTH = 6.6;
-const HORIZONTAL_PADDING = 32;
+const HORIZONTAL_PADDING = 40;
 const NODE_SEPARATION = 40;
 const RANK_SEPARATION = 100;
 
