@@ -273,7 +273,10 @@ function Flow({ graph }: DependencyGraphProps) {
         gap={24}
         size={1}
       />
-      <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
+      <Controls
+        position="bottom-left"
+        className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:text-text-primary!"
+      />
       <Panel position="top-left">
         <SearchPanel
           value={searchQuery}
@@ -295,7 +298,7 @@ function Flow({ graph }: DependencyGraphProps) {
         </Panel>
       )}
       <MiniMap
-        position="bottom-left"
+        position="bottom-right"
         bgColor="#0d1117"
         nodeColor="#7d8590"
         nodeStrokeColor="#30363d"
@@ -305,11 +308,11 @@ function Flow({ graph }: DependencyGraphProps) {
         zoomable
       />
       <Panel
-        position="bottom-right"
+        position="bottom-center"
         className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
       >
         Scroll to zoom · drag to pan · click a file to trace its connections
-      </Panel>
+      </Panel>{" "}
     </ReactFlow>
   );
 }
