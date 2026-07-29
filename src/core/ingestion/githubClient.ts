@@ -1,5 +1,6 @@
 import { Octokit } from "octokit";
 import { env } from "@/lib/env";
+import { AppError } from "@/lib/errors";
 
 const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
 
@@ -23,8 +24,9 @@ export async function fetchRepoTree(
   });
 
   if (data.truncated) {
-    throw new Error(
+    throw new AppError(
       `The file tree for ${owner}/${repo} is too large and was truncated by GitHub's API — this repo isn't supported yet.`,
+      400,
     );
   }
 

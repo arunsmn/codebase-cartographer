@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/errors";
 import type { RemoteTreeEntry } from "./githubClient";
 
 const IGNORED_DIRECTORIES = [
@@ -45,8 +46,9 @@ export function filterRelevantFiles(
   });
 
   if (relevant.length > MAX_FILE_COUNT) {
-    throw new Error(
+    throw new AppError(
       `This repo has ${relevant.length} matching files, over our current limit of ${MAX_FILE_COUNT}. Support for larger repos isn't built yet.`,
+      400,
     );
   }
 
