@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
   Panel,
+  useNodesState,
+  useEdgesState,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -19,7 +22,7 @@ interface DependencyGraphProps {
 const nodeTypes = { file: FileNode };
 
 export function DependencyGraph({ layout }: DependencyGraphProps) {
-  const nodes: FileNodeType[] = layout.nodes.map((n) => ({
+  const initialNodes: FileNodeType[] = layout.nodes.map((n) => ({
     id: n.id,
     type: "file",
     position: { x: n.x, y: n.y },
@@ -27,18 +30,29 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
     style: { width: n.width, height: n.height },
   }));
 
-  const edges: Edge[] = layout.edges.map((e) => ({
+  const initialEdges: Edge[] = layout.edges.map((e) => ({
     id: `${e.from}->${e.to}`,
     source: e.from,
     target: e.to,
     style: { stroke: "var(--color-edge)", strokeWidth: 1.5 },
   }));
 
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layout]);
+
   return (
     <div className="h-full w-full bg-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ minZoom: 0.5, maxZoom: 1 }}
