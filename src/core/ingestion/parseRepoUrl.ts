@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/errors";
+
 export interface RepoLocation {
   owner: string;
   repo: string;
@@ -11,8 +13,9 @@ export function parseRepoUrl(url: string, branch = "main"): RepoLocation {
   const match = GITHUB_URL_PATTERN.exec(url.trim());
 
   if (!match?.groups) {
-    throw new Error(
+    throw new AppError(
       `"${url}" doesn't look like a valid GitHub repository URL. Expected something like https://github.com/owner/repo`,
+      400,
     );
   }
 
