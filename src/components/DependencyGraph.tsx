@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -32,6 +32,11 @@ function SearchPanel({
 }) {
   const { setCenter } = useReactFlow();
   const [query, setQuery] = useState("");
+  const nodesRef = useRef(nodes);
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
 
   useEffect(() => {
     const trimmed = query.trim().toLowerCase();
@@ -40,7 +45,9 @@ function SearchPanel({
       return;
     }
 
-    const matches = nodes.filter((n) => n.id.toLowerCase().includes(trimmed));
+    const matches = nodesRef.current.filter((n) =>
+      n.id.toLowerCase().includes(trimmed),
+    );
     onHighlight(new Set(matches.map((n) => n.id)));
 
     const first = matches[0];
@@ -55,7 +62,7 @@ function SearchPanel({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, nodes]);
+  }, [query]);
 
   return (
     <input
