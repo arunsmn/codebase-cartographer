@@ -275,6 +275,7 @@ function Flow({ graph }: DependencyGraphProps) {
       />
       <Controls
         position="bottom-left"
+        showInteractive={false}
         className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:text-text-primary!"
       />
       <Panel position="top-left">
