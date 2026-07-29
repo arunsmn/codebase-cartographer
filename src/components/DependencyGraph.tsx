@@ -5,6 +5,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Panel,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -34,12 +35,14 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
   }));
 
   return (
-    <div className="h-screen w-full bg-canvas">
+    <div className="h-full w-full bg-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ minZoom: 0.5, maxZoom: 1 }}
+        minZoom={0.05}
         proOptions={{ hideAttribution: true }}
       >
         <Background
@@ -49,6 +52,12 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
           size={1}
         />
         <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
+        <Panel
+          position="bottom-right"
+          className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
+        >
+          Scroll to zoom · drag to pan
+        </Panel>
       </ReactFlow>
     </div>
   );
