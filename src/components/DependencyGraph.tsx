@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -9,6 +9,7 @@ import {
   Panel,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -20,6 +21,51 @@ interface DependencyGraphProps {
 }
 
 const nodeTypes = { file: FileNode };
+
+function SearchPanel({
+  nodes,
+  onHighlight,
+}: {
+  nodes: FileNodeType[];
+  onHighlight: (matchIds: Set<string>) => void;
+}) {
+  const { setCenter } = useReactFlow();
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) {
+      onHighlight(new Set());
+      return;
+    }
+
+    const matches = nodes.filter((n) => n.id.toLowerCase().includes(trimmed));
+    onHighlight(new Set(matches.map((n) => n.id)));
+
+    const first = matches[0];
+    if (first) {
+      const width =
+        typeof first.style?.width === "number" ? first.style.width : 180;
+      const height =
+        typeof first.style?.height === "number" ? first.style.height : 56;
+      setCenter(first.position.x + width / 2, first.position.y + height / 2, {
+        zoom: 1,
+        duration: 400,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, nodes]);
+
+  return (
+    <input
+      type="text"
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Search files…"
+      className="w-56 rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-primary outline-none focus:border-accent"
+    />
+  );
+}
 
 export function DependencyGraph({ layout }: DependencyGraphProps) {
   const initialNodes: FileNodeType[] = layout.nodes.map((n) => ({
@@ -39,6 +85,7 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setNodes(initialNodes);
@@ -46,10 +93,15 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
 
+  const displayNodes = nodes.map((n) => ({
+    ...n,
+    data: { ...n.data, highlighted: highlightedIds.has(n.id) },
+  }));
+
   return (
     <div className="h-full w-full bg-canvas">
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -66,6 +118,9 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
           size={1}
         />
         <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
+        <Panel position="top-left">
+          <SearchPanel nodes={nodes} onHighlight={setHighlightedIds} />
+        </Panel>
         <Panel
           position="bottom-right"
           className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
