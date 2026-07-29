@@ -87,6 +87,7 @@ function Flow({ graph }: DependencyGraphProps) {
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const focusedKeyRef = useRef<string>("");
+  const pendingFullFitRef = useRef(false);
 
   function handleSearchSubmit() {
     const trimmed = searchQuery.trim().toLowerCase();
@@ -122,23 +123,34 @@ function Flow({ graph }: DependencyGraphProps) {
     setSearchTargetIds(new Set(matches.map((n) => n.id)));
   }
 
-  // Purely imperative: pan/zoom to search targets once they actually exist as
-  // visible nodes (immediately, or after a group-expansion re-layout lands).
-  // No setState here — only an external-system call (fitView) — so this
-  // doesn't trigger React's cascading-render warning.
+  // Purely imperative viewport control — no setState here except via refs,
+  // so this never triggers React's cascading-render warning. Search focus
+  // takes priority; a pending full-fit (from manual expand/collapse) only
+  // runs when there's no active search.
   useEffect(() => {
-    if (searchTargetIds.size === 0) return;
+    if (searchTargetIds.size > 0) {
+      const key = [...searchTargetIds].sort().join(",");
+      if (focusedKeyRef.current !== key) {
+        const visibleMatches = layout.nodes.filter((n) =>
+          searchTargetIds.has(n.id),
+        );
+        if (visibleMatches.length > 0) {
+          focusedKeyRef.current = key;
+          fitView({
+            nodes: visibleMatches,
+            duration: 400,
+            maxZoom: 1,
+            padding: 0.3,
+          });
+        }
+      }
+      return;
+    }
 
-    const key = [...searchTargetIds].sort().join(",");
-    if (focusedKeyRef.current === key) return;
-
-    const visibleMatches = layout.nodes.filter((n) =>
-      searchTargetIds.has(n.id),
-    );
-    if (visibleMatches.length === 0) return; // still waiting for a group to expand
-
-    focusedKeyRef.current = key;
-    fitView({ nodes: visibleMatches, duration: 400, maxZoom: 1, padding: 0.3 });
+    if (pendingFullFitRef.current) {
+      pendingFullFitRef.current = false;
+      fitView({ duration: 400, padding: 0.2 });
+    }
   }, [layout, searchTargetIds, fitView]);
 
   function handleNodeClick(nodeId: string) {
@@ -149,6 +161,7 @@ function Flow({ graph }: DependencyGraphProps) {
       setSearchQuery("");
       setSearchTargetIds(new Set());
       setSelectedNodeId(null);
+      pendingFullFitRef.current = true;
       return;
     }
 
@@ -163,7 +176,10 @@ function Flow({ graph }: DependencyGraphProps) {
       next.delete(groupId);
       return next;
     });
+    setSearchQuery("");
+    setSearchTargetIds(new Set());
     setSelectedNodeId(null);
+    pendingFullFitRef.current = true;
   }
 
   const { connectedNodeIds, connectedEdgeIds } = useMemo(() => {
