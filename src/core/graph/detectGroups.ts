@@ -7,9 +7,9 @@ export interface GroupingResult {
   groups: FileGroup[];
   ungroupedPaths: string[];
 }
-
 const MONOREPO_CONTAINERS = ["apps", "packages", "libs", "services"];
 const MIN_SUBDIRECTORIES_TO_GROUP = 2;
+const MIN_FILES_PER_GROUP = 2;
 
 export function detectGroups(filePaths: string[]): GroupingResult {
   const containerGroups = new Map<string, Map<string, string[]>>();
@@ -39,6 +39,10 @@ export function detectGroups(filePaths: string[]): GroupingResult {
       continue;
     }
     for (const [groupId, paths] of groupMap) {
+      if (paths.length < MIN_FILES_PER_GROUP) {
+        ungroupedPaths.push(...paths);
+        continue;
+      }
       groups.push({ id: groupId, filePaths: paths });
     }
   }
