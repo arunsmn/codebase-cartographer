@@ -8,6 +8,7 @@ const envSchema = z.object({
     .string()
     .min(1, "GEMINI_API_KEY is required for narration generation"),
   ANTHROPIC_API_KEY: z.string().optional(),
+  NARRATION_PROVIDER: z.enum(["gemini", "mock"]).default("gemini"),
 });
 
 export const env = envSchema.parse(process.env);
