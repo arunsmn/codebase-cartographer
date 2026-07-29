@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -76,25 +82,64 @@ function Flow({ graph }: DependencyGraphProps) {
   );
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMatchIds, setSearchMatchIds] = useState<Set<string>>(new Set());
+  const [searchTargetIds, setSearchTargetIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const focusedKeyRef = useRef<string>("");
 
   function handleSearchSubmit() {
     const trimmed = searchQuery.trim().toLowerCase();
     if (!trimmed) {
-      setSearchMatchIds(new Set());
+      setSearchTargetIds(new Set());
       return;
     }
 
-    const matches = layout.nodes.filter((n) =>
+    const matches = graph.nodes.filter((n) =>
       n.id.toLowerCase().includes(trimmed),
     );
-    setSearchMatchIds(new Set(matches.map((n) => n.id)));
-    if (matches.length === 0) return;
+    if (matches.length === 0) {
+      setSearchTargetIds(new Set());
+      return;
+    }
 
     setSelectedNodeId(null);
-    fitView({ nodes: matches, duration: 400, maxZoom: 1, padding: 0.3 });
+    focusedKeyRef.current = ""; // force a fresh pan even if this exact target set was focused before
+
+    const groupsToExpand = new Set<string>();
+    for (const match of matches) {
+      const group = groupingResult.groups.find(
+        (g) => !expandedGroupIds.has(g.id) && g.filePaths.includes(match.id),
+      );
+      if (group) groupsToExpand.add(group.id);
+    }
+    if (groupsToExpand.size > 0) {
+      setExpandedGroupIds(
+        (current) => new Set([...current, ...groupsToExpand]),
+      );
+    }
+
+    setSearchTargetIds(new Set(matches.map((n) => n.id)));
   }
+
+  // Purely imperative: pan/zoom to search targets once they actually exist as
+  // visible nodes (immediately, or after a group-expansion re-layout lands).
+  // No setState here — only an external-system call (fitView) — so this
+  // doesn't trigger React's cascading-render warning.
+  useEffect(() => {
+    if (searchTargetIds.size === 0) return;
+
+    const key = [...searchTargetIds].sort().join(",");
+    if (focusedKeyRef.current === key) return;
+
+    const visibleMatches = layout.nodes.filter((n) =>
+      searchTargetIds.has(n.id),
+    );
+    if (visibleMatches.length === 0) return; // still waiting for a group to expand
+
+    focusedKeyRef.current = key;
+    fitView({ nodes: visibleMatches, duration: 400, maxZoom: 1, padding: 0.3 });
+  }, [layout, searchTargetIds, fitView]);
 
   function handleNodeClick(nodeId: string) {
     const collapsedNode = collapsedNodeById.get(nodeId);
@@ -102,13 +147,13 @@ function Flow({ graph }: DependencyGraphProps) {
     if (collapsedNode?.isGroup) {
       setExpandedGroupIds((current) => new Set(current).add(nodeId));
       setSearchQuery("");
-      setSearchMatchIds(new Set());
+      setSearchTargetIds(new Set());
       setSelectedNodeId(null);
       return;
     }
 
     setSearchQuery("");
-    setSearchMatchIds(new Set());
+    setSearchTargetIds(new Set());
     setSelectedNodeId((current) => (current === nodeId ? null : nodeId));
   }
 
@@ -145,6 +190,8 @@ function Flow({ graph }: DependencyGraphProps) {
     const base = {
       id: n.id,
       position: { x: n.x, y: n.y },
+      width: n.width,
+      height: n.height,
       style: { width: n.width, height: n.height },
     };
 
@@ -163,7 +210,7 @@ function Flow({ graph }: DependencyGraphProps) {
         path: n.id,
         connected: selectedNodeId ? connectedNodeIds.has(n.id) : false,
         dimmed: selectedNodeId ? !connectedNodeIds.has(n.id) : false,
-        searchMatched: !selectedNodeId && searchMatchIds.has(n.id),
+        searchMatched: !selectedNodeId && searchTargetIds.has(n.id),
       },
     } satisfies FileNodeType;
   });
