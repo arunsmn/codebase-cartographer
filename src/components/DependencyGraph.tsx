@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -22,6 +22,7 @@ interface DependencyGraphProps {
 
 const nodeTypes = { file: FileNode };
 
+// SearchPanel stays exactly as it was — no changes needed there.
 function SearchPanel({
   nodes,
   onHighlight,
@@ -83,28 +84,74 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
     style: { stroke: "var(--color-edge)", strokeWidth: 1.5 },
   }));
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const [nodes, setNodes, onNodesChange] =
+    useNodesState<FileNodeType>(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
+  const [searchHighlightedIds, setSearchHighlightedIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout]);
+  const { connectedNodeIds, connectedEdgeIds } = useMemo(() => {
+    if (!selectedNodeId)
+      return {
+        connectedNodeIds: new Set<string>(),
+        connectedEdgeIds: new Set<string>(),
+      };
 
-  const displayNodes = nodes.map((n) => ({
+    const nodeIds = new Set<string>([selectedNodeId]);
+    const edgeIds = new Set<string>();
+
+    for (const edge of edges) {
+      if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
+        edgeIds.add(edge.id);
+        nodeIds.add(edge.source);
+        nodeIds.add(edge.target);
+      }
+    }
+
+    return { connectedNodeIds: nodeIds, connectedEdgeIds: edgeIds };
+  }, [selectedNodeId, edges]);
+
+  const displayNodes: FileNodeType[] = nodes.map((n) => ({
     ...n,
-    data: { ...n.data, highlighted: highlightedIds.has(n.id) },
+    data: selectedNodeId
+      ? {
+          path: n.data.path,
+          highlighted: connectedNodeIds.has(n.id),
+          dimmed: !connectedNodeIds.has(n.id),
+        }
+      : {
+          path: n.data.path,
+          highlighted: searchHighlightedIds.has(n.id),
+          dimmed: false,
+        },
   }));
+
+  const displayEdges: Edge[] = edges.map((e) => {
+    if (!selectedNodeId) return e;
+    const isConnected = connectedEdgeIds.has(e.id);
+    return {
+      ...e,
+      style: {
+        stroke: isConnected ? "var(--color-accent)" : "var(--color-edge)",
+        strokeWidth: isConnected ? 2 : 1.5,
+        opacity: isConnected ? 1 : 0.15,
+      },
+    };
+  });
 
   return (
     <div className="h-full w-full bg-canvas">
       <ReactFlow
         nodes={displayNodes}
-        edges={edges}
+        edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={(_, node) =>
+          setSelectedNodeId((current) => (current === node.id ? null : node.id))
+        }
+        onPaneClick={() => setSelectedNodeId(null)}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ minZoom: 0.5, maxZoom: 1 }}
@@ -119,13 +166,13 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
         />
         <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
         <Panel position="top-left">
-          <SearchPanel nodes={nodes} onHighlight={setHighlightedIds} />
+          <SearchPanel nodes={nodes} onHighlight={setSearchHighlightedIds} />
         </Panel>
         <Panel
           position="bottom-right"
           className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
         >
-          Scroll to zoom · drag to pan
+          Scroll to zoom · drag to pan · click a file to trace its connections
         </Panel>
       </ReactFlow>
     </div>

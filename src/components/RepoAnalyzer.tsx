@@ -50,8 +50,8 @@ export function RepoAnalyzer() {
 
   if (status === "success" && result) {
     return (
-      <div className="flex h-screen w-full flex-col bg-canvas">
-        <div className="border-b border-node-border px-6 py-4">
+      <div className="flex h-screen w-full flex-col overflow-hidden bg-canvas">
+        <div className="shrink-0 border-b border-node-border px-6 py-4">
           <h1 className="font-mono text-sm text-text-primary">
             {result.owner}/{result.repo}
             <span className="ml-2 text-text-secondary">({result.branch})</span>
@@ -60,8 +60,11 @@ export function RepoAnalyzer() {
             {result.narration.summary}
           </p>
         </div>
-        <div className="flex-1">
-          <DependencyGraph layout={result.layout} />
+        <div className="min-h-0 flex-1">
+          <DependencyGraph
+            key={`${result.owner}/${result.repo}/${result.branch}`}
+            layout={result.layout}
+          />
         </div>
       </div>
     );
