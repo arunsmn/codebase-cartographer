@@ -7,6 +7,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  MiniMap,
   Panel,
   useNodesState,
   useEdgesState,
@@ -155,6 +156,15 @@ function Flow({ layout }: DependencyGraphProps) {
         color="#30363d"
         gap={24}
         size={1}
+      />
+      <MiniMap
+        nodeColor="#161b22"
+        nodeStrokeColor="#30363d"
+        maskColor="rgba(13, 17, 23, 0.75)"
+        className="border-node-border! bg-node!"
+        pannable
+        zoomable
+        position="bottom-left"
       />
       <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
       <Panel position="top-left">
