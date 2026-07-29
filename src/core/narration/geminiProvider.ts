@@ -1,24 +1,47 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ApiError } from "@google/genai";
+import pRetry, { AbortError } from "p-retry";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { narrationSchema } from "./schema";
 import { buildNarrationPrompt } from "./buildPrompt";
+import { parseNarrationResponse } from "./repairNarration";
 import type { NarrationProvider } from "./NarrationProvider";
 import type { DependencyGraph } from "@/core/graph/types";
-import { parseNarrationResponse } from "./repairNarration";
 
 const MODEL = "gemini-3.6-flash";
+const RETRYABLE_STATUS_CODES = new Set([429, 503]);
+
+async function callGemini(ai: GoogleGenAI, prompt: string) {
+  try {
+    return await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseJsonSchema: z.toJSONSchema(narrationSchema),
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      !RETRYABLE_STATUS_CODES.has(error.status)
+    ) {
+      throw new AbortError(error);
+    }
+    throw error;
+  }
+}
 
 async function narrate(graph: DependencyGraph, repoLabel: string) {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const prompt = buildNarrationPrompt(graph, repoLabel);
 
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: z.toJSONSchema(narrationSchema),
+  const response = await pRetry(() => callGemini(ai, prompt), {
+    retries: 3,
+    onFailedAttempt: (error) => {
+      console.warn(
+        `Gemini call failed (attempt ${error.attemptNumber}, ${error.retriesLeft} retries left): ${error.message}`,
+      );
     },
   });
 
