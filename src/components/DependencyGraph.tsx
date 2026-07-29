@@ -158,13 +158,14 @@ function Flow({ layout }: DependencyGraphProps) {
         size={1}
       />
       <MiniMap
-        nodeColor="#161b22"
+        position="bottom-left"
+        bgColor="#0d1117"
+        nodeColor="#7d8590"
         nodeStrokeColor="#30363d"
         maskColor="rgba(13, 17, 23, 0.75)"
-        className="border-node-border! bg-node!"
+        className="border-node-border!"
         pannable
         zoomable
-        position="bottom-left"
       />
       <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
       <Panel position="top-left">
