@@ -68,36 +68,29 @@ function Flow({ layout }: DependencyGraphProps) {
   const [edges, , onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchMatchId, setSearchMatchId] = useState<string | null>(null);
+  const [searchMatchIds, setSearchMatchIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
-  const { setCenter } = useReactFlow();
+  const { fitView } = useReactFlow();
 
   function handleSearchSubmit() {
     const trimmed = searchQuery.trim().toLowerCase();
     if (!trimmed) {
-      setSearchMatchId(null);
+      setSearchMatchIds(new Set());
       return;
     }
 
-    const match = nodes.find((n) => n.id.toLowerCase().includes(trimmed));
-    setSearchMatchId(match?.id ?? null);
-    if (!match) return;
+    const matches = nodes.filter((n) => n.id.toLowerCase().includes(trimmed));
+    setSearchMatchIds(new Set(matches.map((n) => n.id)));
+    if (matches.length === 0) return;
 
     setSelectedNodeId(null);
-    const width =
-      typeof match.style?.width === "number" ? match.style.width : 180;
-    const height =
-      typeof match.style?.height === "number" ? match.style.height : 56;
-    setCenter(match.position.x + width / 2, match.position.y + height / 2, {
-      zoom: 1,
-      duration: 400,
-    });
+    fitView({ nodes: matches, duration: 400, maxZoom: 1, padding: 0.3 });
   }
 
   function handleNodeClick(nodeId: string) {
     setSearchQuery("");
-    setSearchMatchId(null);
+    setSearchMatchIds(new Set());
     setSelectedNodeId((current) => (current === nodeId ? null : nodeId));
   }
 
@@ -126,7 +119,7 @@ function Flow({ layout }: DependencyGraphProps) {
       path: n.data.path,
       connected: selectedNodeId ? connectedNodeIds.has(n.id) : false,
       dimmed: selectedNodeId ? !connectedNodeIds.has(n.id) : false,
-      searchMatched: !selectedNodeId && searchMatchId === n.id,
+      searchMatched: !selectedNodeId && searchMatchIds.has(n.id),
     },
   }));
 
