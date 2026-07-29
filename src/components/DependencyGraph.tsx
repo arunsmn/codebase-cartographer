@@ -9,20 +9,23 @@ import {
   Controls,
   MiniMap,
   Panel,
-  useNodesState,
-  useEdgesState,
   useReactFlow,
   type Edge,
+  type Node as FlowNode,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { LayoutResult } from "@/core/layout/computeLayout";
+import type { DependencyGraph as DependencyGraphData } from "@/core/graph/types";
+import { computeLayout } from "@/core/layout/computeLayout";
+import { detectGroups } from "@/core/graph/detectGroups";
+import { buildCollapsedGraph } from "@/core/graph/buildCollapsedGraph";
 import { FileNode, type FileNodeType } from "./FileNode";
+import { GroupNode, type GroupNodeType } from "./GroupNode";
 
 interface DependencyGraphProps {
-  layout: LayoutResult;
+  graph: DependencyGraphData;
 }
 
-const nodeTypes = { file: FileNode };
+const nodeTypes = { file: FileNode, group: GroupNode };
 
 function SearchPanel({
   value,
@@ -49,30 +52,32 @@ function SearchPanel({
   );
 }
 
-function Flow({ layout }: DependencyGraphProps) {
-  const initialNodes: FileNodeType[] = layout.nodes.map((n) => ({
-    id: n.id,
-    type: "file",
-    position: { x: n.x, y: n.y },
-    data: { path: n.id },
-    style: { width: n.width, height: n.height },
-  }));
+function Flow({ graph }: DependencyGraphProps) {
+  const { fitView } = useReactFlow();
 
-  const initialEdges: Edge[] = layout.edges.map((e) => ({
-    id: `${e.from}->${e.to}`,
-    source: e.from,
-    target: e.to,
-    style: { stroke: "var(--color-edge)", strokeWidth: 1.5 },
-  }));
+  const groupingResult = useMemo(
+    () => detectGroups(graph.nodes.map((n) => n.id)),
+    [graph],
+  );
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
+    new Set(),
+  );
 
-  const [nodes, , onNodesChange] = useNodesState<FileNodeType>(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState<Edge>(initialEdges);
+  const collapsedGraph = useMemo(
+    () => buildCollapsedGraph(graph, groupingResult.groups, expandedGroupIds),
+    [graph, groupingResult, expandedGroupIds],
+  );
+
+  const layout = useMemo(() => computeLayout(collapsedGraph), [collapsedGraph]);
+
+  const collapsedNodeById = useMemo(
+    () => new Map(collapsedGraph.nodes.map((n) => [n.id, n])),
+    [collapsedGraph],
+  );
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMatchIds, setSearchMatchIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
-  const { fitView } = useReactFlow();
 
   function handleSearchSubmit() {
     const trimmed = searchQuery.trim().toLowerCase();
@@ -81,7 +86,9 @@ function Flow({ layout }: DependencyGraphProps) {
       return;
     }
 
-    const matches = nodes.filter((n) => n.id.toLowerCase().includes(trimmed));
+    const matches = layout.nodes.filter((n) =>
+      n.id.toLowerCase().includes(trimmed),
+    );
     setSearchMatchIds(new Set(matches.map((n) => n.id)));
     if (matches.length === 0) return;
 
@@ -90,9 +97,28 @@ function Flow({ layout }: DependencyGraphProps) {
   }
 
   function handleNodeClick(nodeId: string) {
+    const collapsedNode = collapsedNodeById.get(nodeId);
+
+    if (collapsedNode?.isGroup) {
+      setExpandedGroupIds((current) => new Set(current).add(nodeId));
+      setSearchQuery("");
+      setSearchMatchIds(new Set());
+      setSelectedNodeId(null);
+      return;
+    }
+
     setSearchQuery("");
     setSearchMatchIds(new Set());
     setSelectedNodeId((current) => (current === nodeId ? null : nodeId));
+  }
+
+  function handleCollapseGroup(groupId: string) {
+    setExpandedGroupIds((current) => {
+      const next = new Set(current);
+      next.delete(groupId);
+      return next;
+    });
+    setSelectedNodeId(null);
   }
 
   const { connectedNodeIds, connectedEdgeIds } = useMemo(() => {
@@ -104,31 +130,59 @@ function Flow({ layout }: DependencyGraphProps) {
 
     const nodeIds = new Set<string>([selectedNodeId]);
     const edgeIds = new Set<string>();
-    for (const edge of edges) {
-      if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
-        edgeIds.add(edge.id);
-        nodeIds.add(edge.source);
-        nodeIds.add(edge.target);
+    for (const edge of collapsedGraph.edges) {
+      if (edge.from === selectedNodeId || edge.to === selectedNodeId) {
+        edgeIds.add(`${edge.from}->${edge.to}`);
+        nodeIds.add(edge.from);
+        nodeIds.add(edge.to);
       }
     }
     return { connectedNodeIds: nodeIds, connectedEdgeIds: edgeIds };
-  }, [selectedNodeId, edges]);
+  }, [selectedNodeId, collapsedGraph]);
 
-  const displayNodes: FileNodeType[] = nodes.map((n) => ({
-    ...n,
-    data: {
-      path: n.data.path,
-      connected: selectedNodeId ? connectedNodeIds.has(n.id) : false,
-      dimmed: selectedNodeId ? !connectedNodeIds.has(n.id) : false,
-      searchMatched: !selectedNodeId && searchMatchIds.has(n.id),
-    },
-  }));
+  const displayNodes: FlowNode[] = layout.nodes.map((n) => {
+    const collapsedNode = collapsedNodeById.get(n.id);
+    const base = {
+      id: n.id,
+      position: { x: n.x, y: n.y },
+      style: { width: n.width, height: n.height },
+    };
 
-  const displayEdges: Edge[] = edges.map((e) => {
-    if (!selectedNodeId) return e;
-    const isConnected = connectedEdgeIds.has(e.id);
+    if (collapsedNode?.isGroup) {
+      return {
+        ...base,
+        type: "group",
+        data: { fileCount: collapsedNode.fileCount ?? 0 },
+      } satisfies GroupNodeType;
+    }
+
     return {
-      ...e,
+      ...base,
+      type: "file",
+      data: {
+        path: n.id,
+        connected: selectedNodeId ? connectedNodeIds.has(n.id) : false,
+        dimmed: selectedNodeId ? !connectedNodeIds.has(n.id) : false,
+        searchMatched: !selectedNodeId && searchMatchIds.has(n.id),
+      },
+    } satisfies FileNodeType;
+  });
+
+  const displayEdges: Edge[] = collapsedGraph.edges.map((e) => {
+    const id = `${e.from}->${e.to}`;
+    if (!selectedNodeId) {
+      return {
+        id,
+        source: e.from,
+        target: e.to,
+        style: { stroke: "var(--color-edge)", strokeWidth: 1.5 },
+      };
+    }
+    const isConnected = connectedEdgeIds.has(id);
+    return {
+      id,
+      source: e.from,
+      target: e.to,
       style: {
         stroke: isConnected ? "var(--color-accent)" : "var(--color-edge)",
         strokeWidth: isConnected ? 2 : 1.5,
@@ -141,8 +195,7 @@ function Flow({ layout }: DependencyGraphProps) {
     <ReactFlow
       nodes={displayNodes}
       edges={displayEdges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
+      nodesDraggable={false}
       onNodeClick={(_, node) => handleNodeClick(node.id)}
       onPaneClick={() => setSelectedNodeId(null)}
       nodeTypes={nodeTypes}
@@ -157,6 +210,27 @@ function Flow({ layout }: DependencyGraphProps) {
         gap={24}
         size={1}
       />
+      <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
+      <Panel position="top-left">
+        <SearchPanel
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onSubmit={handleSearchSubmit}
+        />
+      </Panel>
+      {expandedGroupIds.size > 0 && (
+        <Panel position="top-right" className="flex flex-col gap-1.5">
+          {[...expandedGroupIds].map((groupId) => (
+            <button
+              key={groupId}
+              onClick={() => handleCollapseGroup(groupId)}
+              className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary hover:border-accent hover:text-text-primary"
+            >
+              ← collapse {groupId}
+            </button>
+          ))}
+        </Panel>
+      )}
       <MiniMap
         position="bottom-left"
         bgColor="#0d1117"
@@ -167,14 +241,6 @@ function Flow({ layout }: DependencyGraphProps) {
         pannable
         zoomable
       />
-      <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
-      <Panel position="top-left">
-        <SearchPanel
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onSubmit={handleSearchSubmit}
-        />
-      </Panel>
       <Panel
         position="bottom-right"
         className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
@@ -185,11 +251,11 @@ function Flow({ layout }: DependencyGraphProps) {
   );
 }
 
-export function DependencyGraph({ layout }: DependencyGraphProps) {
+export function DependencyGraph({ graph }: DependencyGraphProps) {
   return (
     <div className="h-full w-full bg-canvas">
       <ReactFlowProvider>
-        <Flow layout={layout} />
+        <Flow graph={graph} />
       </ReactFlowProvider>
     </div>
   );

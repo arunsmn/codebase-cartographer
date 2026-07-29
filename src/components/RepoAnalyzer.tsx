@@ -2,14 +2,14 @@
 
 import { useState, type FormEvent } from "react";
 import { DependencyGraph } from "./DependencyGraph";
-import type { LayoutResult } from "@/core/layout/computeLayout";
+import type { DependencyGraph as DependencyGraphData } from "@/core/graph/types";
 import type { NarrationResult } from "@/core/narration/types";
 
 interface AnalyzeResponse {
   owner: string;
   repo: string;
   branch: string;
-  layout: LayoutResult;
+  graph: DependencyGraphData;
   narration: NarrationResult;
 }
 
@@ -63,7 +63,7 @@ export function RepoAnalyzer() {
         <div className="min-h-0 flex-1">
           <DependencyGraph
             key={`${result.owner}/${result.repo}/${result.branch}`}
-            layout={result.layout}
+            graph={result.graph}
           />
         </div>
       </div>
