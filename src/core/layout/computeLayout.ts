@@ -23,15 +23,19 @@ const HORIZONTAL_PADDING = 40;
 const NODE_SEPARATION = 40;
 const RANK_SEPARATION = 100;
 
-function estimateNodeWidth(filePath: string): number {
-  const lastSlash = filePath.lastIndexOf("/");
-  const basename = lastSlash === -1 ? filePath : filePath.slice(lastSlash + 1);
-  const dirname = lastSlash === -1 ? "" : filePath.slice(0, lastSlash);
+function estimateNodeWidth(path: string): number {
+  const lastSlash = path.lastIndexOf("/");
+  const basename = lastSlash === -1 ? path : path.slice(lastSlash + 1);
+  const dirname = lastSlash === -1 ? "" : path.slice(0, lastSlash);
+  const looksLikeGroup = !basename.includes(".");
+
+  const primaryText = looksLikeGroup ? path : basename;
+  const secondaryText = looksLikeGroup ? "" : dirname;
 
   const estimated =
     Math.max(
-      basename.length * PRIMARY_CHAR_WIDTH,
-      dirname.length * SECONDARY_CHAR_WIDTH,
+      primaryText.length * PRIMARY_CHAR_WIDTH,
+      secondaryText.length * SECONDARY_CHAR_WIDTH,
     ) + HORIZONTAL_PADDING;
 
   return Math.min(MAX_NODE_WIDTH, Math.max(MIN_NODE_WIDTH, estimated));
