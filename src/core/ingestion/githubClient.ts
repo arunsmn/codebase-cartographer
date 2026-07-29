@@ -16,12 +16,29 @@ export async function fetchRepoTree(
   repo: string,
   branch: string,
 ): Promise<RemoteTreeEntry[]> {
-  const { data } = await octokit.rest.git.getTree({
-    owner,
-    repo,
-    tree_sha: branch,
-    recursive: "true",
-  });
+  let data;
+
+  try {
+    ({ data } = await octokit.rest.git.getTree({
+      owner,
+      repo,
+      tree_sha: branch,
+      recursive: "true",
+    }));
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "status" in error &&
+      error.status === 404
+    ) {
+      throw new AppError(
+        `Could not find ${owner}/${repo} on branch "${branch}". This usually means the repository is private, doesn't exist, or the branch name is wrong — Cartographer currently only supports public repositories.`,
+        404,
+      );
+    }
+    throw error;
+  }
 
   if (data.truncated) {
     throw new AppError(
