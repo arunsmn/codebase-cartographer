@@ -38,9 +38,9 @@ async function narrate(graph: DependencyGraph, repoLabel: string) {
 
   const response = await pRetry(() => callGemini(ai, prompt), {
     retries: 3,
-    onFailedAttempt: (error) => {
+    onFailedAttempt: ({ error, attemptNumber, retriesLeft }) => {
       console.warn(
-        `Gemini call failed (attempt ${error.attemptNumber}, ${error.retriesLeft} retries left): ${error.message}`,
+        `Gemini call failed (attempt ${attemptNumber}, ${retriesLeft} retries left): ${error.message}`,
       );
     },
   });
