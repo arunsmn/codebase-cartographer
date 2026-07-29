@@ -1,6 +1,11 @@
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 
-export type FileNodeType = Node<{ path: string; highlighted?: boolean }>;
+export type FileNodeType = Node<{
+  path: string;
+  searchMatched?: boolean;
+  connected?: boolean;
+  dimmed?: boolean;
+}>;
 
 export function FileNode({ data }: NodeProps<FileNodeType>) {
   const lastSlash = data.path.lastIndexOf("/");
@@ -8,10 +13,16 @@ export function FileNode({ data }: NodeProps<FileNodeType>) {
     lastSlash === -1 ? data.path : data.path.slice(lastSlash + 1);
   const dirname = lastSlash === -1 ? "" : data.path.slice(0, lastSlash);
 
+  const borderClass = data.connected
+    ? "border-accent"
+    : data.searchMatched
+      ? "border-search"
+      : "border-node-border";
+
   return (
     <div
-      className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-md border px-3 py-2 font-mono transition-colors ${
-        data.highlighted ? "border-accent" : "border-node-border"
+      className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-md border px-3 py-2 font-mono transition-all ${borderClass} ${
+        data.dimmed ? "opacity-30" : "opacity-100"
       } bg-node`}
       title={data.path}
     >

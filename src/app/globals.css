@@ -9,7 +9,8 @@
   --color-text-primary: #e6edf3;
   --color-text-secondary: #7d8590;
   --color-accent: #58a6ff;
-  --color-edge: #30363d;
+  --color-edge: #484f58;
+  --color-search: #d29922;
 }
 
 @import "@xyflow/react/dist/style.css";
