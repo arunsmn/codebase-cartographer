@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   BackgroundVariant,
   Controls,
@@ -22,60 +23,32 @@ interface DependencyGraphProps {
 
 const nodeTypes = { file: FileNode };
 
-// SearchPanel stays exactly as it was — no changes needed there.
 function SearchPanel({
-  nodes,
-  onHighlight,
+  value,
+  onChange,
+  onSubmit,
 }: {
-  nodes: FileNodeType[];
-  onHighlight: (matchIds: Set<string>) => void;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
 }) {
-  const { setCenter } = useReactFlow();
-  const [query, setQuery] = useState("");
-  const nodesRef = useRef(nodes);
-
-  useEffect(() => {
-    nodesRef.current = nodes;
-  }, [nodes]);
-
-  useEffect(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) {
-      onHighlight(new Set());
-      return;
-    }
-
-    const matches = nodesRef.current.filter((n) =>
-      n.id.toLowerCase().includes(trimmed),
-    );
-    onHighlight(new Set(matches.map((n) => n.id)));
-
-    const first = matches[0];
-    if (first) {
-      const width =
-        typeof first.style?.width === "number" ? first.style.width : 180;
-      const height =
-        typeof first.style?.height === "number" ? first.style.height : 56;
-      setCenter(first.position.x + width / 2, first.position.y + height / 2, {
-        zoom: 1,
-        duration: 400,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") onSubmit();
+  }
 
   return (
     <input
       type="text"
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
-      placeholder="Search files…"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      placeholder="Search files, press Enter…"
       className="w-56 rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-primary outline-none focus:border-accent"
     />
   );
 }
 
-export function DependencyGraph({ layout }: DependencyGraphProps) {
+function Flow({ layout }: DependencyGraphProps) {
   const initialNodes: FileNodeType[] = layout.nodes.map((n) => ({
     id: n.id,
     type: "file",
@@ -91,13 +64,42 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
     style: { stroke: "var(--color-edge)", strokeWidth: 1.5 },
   }));
 
-  const [nodes, setNodes, onNodesChange] =
-    useNodesState<FileNodeType>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
-  const [searchHighlightedIds, setSearchHighlightedIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [nodes, , onNodesChange] = useNodesState<FileNodeType>(initialNodes);
+  const [edges, , onEdgesChange] = useEdgesState<Edge>(initialEdges);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchMatchId, setSearchMatchId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  const { setCenter } = useReactFlow();
+
+  function handleSearchSubmit() {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) {
+      setSearchMatchId(null);
+      return;
+    }
+
+    const match = nodes.find((n) => n.id.toLowerCase().includes(trimmed));
+    setSearchMatchId(match?.id ?? null);
+    if (!match) return;
+
+    setSelectedNodeId(null);
+    const width =
+      typeof match.style?.width === "number" ? match.style.width : 180;
+    const height =
+      typeof match.style?.height === "number" ? match.style.height : 56;
+    setCenter(match.position.x + width / 2, match.position.y + height / 2, {
+      zoom: 1,
+      duration: 400,
+    });
+  }
+
+  function handleNodeClick(nodeId: string) {
+    setSearchQuery("");
+    setSearchMatchId(null);
+    setSelectedNodeId((current) => (current === nodeId ? null : nodeId));
+  }
 
   const { connectedNodeIds, connectedEdgeIds } = useMemo(() => {
     if (!selectedNodeId)
@@ -108,7 +110,6 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
 
     const nodeIds = new Set<string>([selectedNodeId]);
     const edgeIds = new Set<string>();
-
     for (const edge of edges) {
       if (edge.source === selectedNodeId || edge.target === selectedNodeId) {
         edgeIds.add(edge.id);
@@ -116,23 +117,17 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
         nodeIds.add(edge.target);
       }
     }
-
     return { connectedNodeIds: nodeIds, connectedEdgeIds: edgeIds };
   }, [selectedNodeId, edges]);
 
   const displayNodes: FileNodeType[] = nodes.map((n) => ({
     ...n,
-    data: selectedNodeId
-      ? {
-          path: n.data.path,
-          highlighted: connectedNodeIds.has(n.id),
-          dimmed: !connectedNodeIds.has(n.id),
-        }
-      : {
-          path: n.data.path,
-          highlighted: searchHighlightedIds.has(n.id),
-          dimmed: false,
-        },
+    data: {
+      path: n.data.path,
+      connected: selectedNodeId ? connectedNodeIds.has(n.id) : false,
+      dimmed: selectedNodeId ? !connectedNodeIds.has(n.id) : false,
+      searchMatched: !selectedNodeId && searchMatchId === n.id,
+    },
   }));
 
   const displayEdges: Edge[] = edges.map((e) => {
@@ -149,39 +144,49 @@ export function DependencyGraph({ layout }: DependencyGraphProps) {
   });
 
   return (
-    <div className="h-full w-full bg-canvas">
-      <ReactFlow
-        nodes={displayNodes}
-        edges={displayEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) =>
-          setSelectedNodeId((current) => (current === node.id ? null : node.id))
-        }
-        onPaneClick={() => setSelectedNodeId(null)}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ minZoom: 0.5, maxZoom: 1 }}
-        minZoom={0.05}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          color="#30363d"
-          gap={24}
-          size={1}
+    <ReactFlow
+      nodes={displayNodes}
+      edges={displayEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onNodeClick={(_, node) => handleNodeClick(node.id)}
+      onPaneClick={() => setSelectedNodeId(null)}
+      nodeTypes={nodeTypes}
+      fitView
+      fitViewOptions={{ minZoom: 0.5, maxZoom: 1 }}
+      minZoom={0.05}
+      proOptions={{ hideAttribution: true }}
+    >
+      <Background
+        variant={BackgroundVariant.Dots}
+        color="#30363d"
+        gap={24}
+        size={1}
+      />
+      <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
+      <Panel position="top-left">
+        <SearchPanel
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onSubmit={handleSearchSubmit}
         />
-        <Controls className="border-node-border! bg-node! [&_button]:border-node-border! [&_button]:bg-node! [&_button]:fill-text-primary!" />
-        <Panel position="top-left">
-          <SearchPanel nodes={nodes} onHighlight={setSearchHighlightedIds} />
-        </Panel>
-        <Panel
-          position="bottom-right"
-          className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
-        >
-          Scroll to zoom · drag to pan · click a file to trace its connections
-        </Panel>
-      </ReactFlow>
+      </Panel>
+      <Panel
+        position="bottom-right"
+        className="rounded-md border border-node-border bg-node px-3 py-1.5 font-mono text-xs text-text-secondary"
+      >
+        Scroll to zoom · drag to pan · click a file to trace its connections
+      </Panel>
+    </ReactFlow>
+  );
+}
+
+export function DependencyGraph({ layout }: DependencyGraphProps) {
+  return (
+    <div className="h-full w-full bg-canvas">
+      <ReactFlowProvider>
+        <Flow layout={layout} />
+      </ReactFlowProvider>
     </div>
   );
 }
