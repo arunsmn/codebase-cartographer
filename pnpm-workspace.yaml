@@ -5,5 +5,7 @@ allowBuilds:
 confirmModulesPurge: false
 
 onlyBuiltDependencies:
+  - '@google/genai'
+  - protobufjs
   - sharp
   - unrs-resolver
