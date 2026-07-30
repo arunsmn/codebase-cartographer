@@ -47,20 +47,15 @@ is ever left to an LLM to guess.
 
 ## Architecture
 
-GitHub URL
-│
-▼
-┌─────────────┐ ┌──────────────┐ ┌───────────────┐ ┌──────────────┐
-│ Ingestion │──▶│ Parser │──▶│ Graph │──▶│ Narration │
-│ (GitHub API) │ │ (ts-morph) │ │ (nodes/edges) │ │ (Gemini) │
-└─────────────┘ └──────────────┘ └───────────────┘ └──────────────┘
-│
-▼
-┌───────────────────┐
-│ Layout + Render │
-│ (dagre, client-side│
-│ for live grouping) │
-└───────────────────┘
+```mermaid
+flowchart LR
+    A[GitHub URL] --> B["Ingestion<br/>(GitHub API)"]
+    B --> C["Parser<br/>(ts-morph)"]
+    C --> D["Graph<br/>(nodes/edges)"]
+    D --> E["Narration<br/>(Gemini)"]
+    D --> F["Layout + Render<br/>(dagre, client-side)"]
+```
+
 Each stage lives in its own module under `src/core/`, with no dependency
 on Next.js or React — the parser, graph builder, and narration agent could
 be reused in a CLI tool tomorrow without any changes. See `docs/adr/` for
