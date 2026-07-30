@@ -33,3 +33,9 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Build
+        run: pnpm build
+        env:
+          GITHUB_TOKEN: "ci-placeholder-not-a-real-token"
+          GEMINI_API_KEY: "ci-placeholder-not-a-real-key"
