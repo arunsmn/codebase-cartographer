@@ -11,7 +11,7 @@ explaining how the codebase actually fits together.
 **Point it at a repo:**
 ![Home screen](docs/screenshot-home.png)
 
-**Get an accurate, navigable architecture diagram:**
+**Get an accurate, navigable architecture diagram — with monorepo grouping and click-to-trace connections:**
 ![Analyzed repo with a group expanded and a connection highlighted](docs/screenshot-analyzed.png)
 
 ## Why this exists
