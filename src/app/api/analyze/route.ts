@@ -10,6 +10,7 @@ import type { DependencyGraph } from "@/core/graph/types";
 import { AppError } from "@/lib/errors";
 import { getCached, setCached } from "@/lib/analysisCache";
 import { env } from "@/lib/env";
+import { isRateLimited } from "@/lib/rateLimit";
 
 const analyzeRequestSchema = z.object({
   url: z.url(),
@@ -28,6 +29,14 @@ const narrationProvider =
   env.NARRATION_PROVIDER === "mock" ? mockProvider : geminiProvider;
 
 export async function POST(request: NextRequest) {
+  const identifier = request.headers.get("x-forwarded-for") ?? "unknown";
+  if (isRateLimited(identifier)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a few minutes and try again." },
+      { status: 429 },
+    );
+  }
+
   const body = await request.json();
   const parsedBody = analyzeRequestSchema.safeParse(body);
 
