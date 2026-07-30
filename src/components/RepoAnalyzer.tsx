@@ -1,12 +1,24 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { DependencyGraph } from "./DependencyGraph";
+import { useEffect, useState, type SubmitEvent } from "react";
+import dynamic from "next/dynamic";
 import { MobileNotice } from "./MobileNotice";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import type { DependencyGraph as DependencyGraphData } from "@/core/graph/types";
 import type { NarrationResult } from "@/core/narration/types";
+
+const DependencyGraph = dynamic(
+  () => import("./DependencyGraph").then((mod) => mod.DependencyGraph),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-canvas font-mono text-sm text-text-secondary">
+        Loading diagram…
+      </div>
+    ),
+  },
+);
 
 interface AnalyzeResponse {
   owner: string;
@@ -45,7 +57,7 @@ export function RepoAnalyzer() {
     return () => clearInterval(interval);
   }, [status]);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("loading");
     setLoadingMessageIndex(0);
