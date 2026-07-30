@@ -130,31 +130,41 @@ export function RepoAnalyzer() {
       <MobileNotice />
       <Header />
       <div className="flex flex-1 items-center justify-center">
-        <form onSubmit={handleSubmit} className="w-full max-w-md px-6">
-          <label className="mb-2 block font-mono text-sm text-text-secondary">
-            GitHub repository URL
-          </label>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
-            required
-          />
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
-          >
-            {status === "loading"
-              ? LOADING_MESSAGES[loadingMessageIndex]
-              : "Analyze"}
-          </button>
-          {status === "error" && (
-            <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
-          )}
-        </form>
+        <div className="w-full max-w-md px-6">
+          <h1 className="mb-2 text-center font-mono text-lg font-semibold text-text-primary">
+            Understand any codebase in seconds
+          </h1>
+          <p className="mb-8 text-center text-sm text-text-secondary">
+            Turns a public JavaScript/TypeScript GitHub repo into an accurate
+            dependency diagram, with an AI-written summary of how it&apos;s
+            structured.
+          </p>
+          <form onSubmit={handleSubmit}>
+            <label className="mb-2 block font-mono text-sm text-text-secondary">
+              GitHub repository URL
+            </label>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://github.com/owner/repo"
+              className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
+              required
+            />
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
+            >
+              {status === "loading"
+                ? LOADING_MESSAGES[loadingMessageIndex]
+                : "Analyze"}
+            </button>
+            {status === "error" && (
+              <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
+            )}
+          </form>
+        </div>
       </div>
       <Footer />
     </div>
