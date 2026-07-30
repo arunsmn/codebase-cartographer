@@ -101,8 +101,13 @@ calling Gemini (useful if you're rate-limited on the free tier).
   `docs/adr/0001-structure-only-narration.md`.
 - **Public repositories only** — the GitHub token is deliberately scoped
   to public, read-only access.
-- **No rate limiting yet** on the analyze endpoint — a known gap, not yet
-  addressed.
+- **Rate limiting is best-effort, not a hard guarantee.** `/api/analyze`
+  uses a simple in-memory, per-IP sliding-window limiter (5 requests per
+  5 minutes). This works well against casual repeated clicking, but
+  in-memory state doesn't survive serverless cold starts — a determined
+  or distributed abuser could still get around it. A more robust version
+  would use a shared store like Vercel KV or Upstash so the limit holds
+  across cold starts.
 - **Not mobile-responsive** — this is a dense, interactive diagram tool;
   it's designed for a desktop screen.
 - **Test coverage is unit-level only** — the deterministic core (parsing,
