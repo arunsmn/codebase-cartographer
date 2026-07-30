@@ -3,7 +3,7 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 const cache = new Map<string, CacheEntry<unknown>>();
 
