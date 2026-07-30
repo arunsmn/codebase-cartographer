@@ -5,6 +5,8 @@ import { DependencyGraph } from "./DependencyGraph";
 import { MobileNotice } from "./MobileNotice";
 import type { DependencyGraph as DependencyGraphData } from "@/core/graph/types";
 import type { NarrationResult } from "@/core/narration/types";
+import { Header } from "./Header";
+import { Footer } from "./Footer";
 
 interface AnalyzeResponse {
   owner: string;
@@ -79,30 +81,34 @@ export function RepoAnalyzer() {
   return (
     <>
       <MobileNotice />
-      <div className="flex h-screen w-full items-center justify-center bg-canvas">
-        <form onSubmit={handleSubmit} className="w-full max-w-md px-6">
-          <label className="mb-2 block font-mono text-sm text-text-secondary">
-            GitHub repository URL
-          </label>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
-            required
-          />
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
-          >
-            {status === "loading" ? "Analyzing…" : "Analyze"}
-          </button>
-          {status === "error" && (
-            <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
-          )}
-        </form>
+      <div className="flex h-screen w-full flex-col bg-canvas">
+        <Header />
+        <div className="flex flex-1 items-center justify-center">
+          <form onSubmit={handleSubmit} className="w-full max-w-md px-6">
+            <label className="mb-2 block font-mono text-sm text-text-secondary">
+              GitHub repository URL
+            </label>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://github.com/owner/repo"
+              className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
+              required
+            />
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
+            >
+              {status === "loading" ? "Analyzing…" : "Analyze"}
+            </button>
+            {status === "error" && (
+              <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
+            )}
+          </form>
+        </div>
+        <Footer />
       </div>
     </>
   );
