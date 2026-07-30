@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { DependencyGraph } from "./DependencyGraph";
+import { MobileNotice } from "./MobileNotice";
 import type { DependencyGraph as DependencyGraphData } from "@/core/graph/types";
 import type { NarrationResult } from "@/core/narration/types";
 
@@ -50,51 +51,59 @@ export function RepoAnalyzer() {
 
   if (status === "success" && result) {
     return (
-      <div className="flex h-screen w-full flex-col overflow-hidden bg-canvas">
-        <div className="shrink-0 border-b border-node-border px-6 py-4">
-          <h1 className="font-mono text-sm text-text-primary">
-            {result.owner}/{result.repo}
-            <span className="ml-2 text-text-secondary">({result.branch})</span>
-          </h1>
-          <p className="mt-1 max-w-3xl text-sm text-text-secondary">
-            {result.narration.summary}
-          </p>
+      <>
+        <MobileNotice />
+        <div className="flex h-screen w-full flex-col overflow-hidden bg-canvas">
+          <div className="shrink-0 border-b border-node-border px-6 py-4">
+            <h1 className="font-mono text-sm text-text-primary">
+              {result.owner}/{result.repo}
+              <span className="ml-2 text-text-secondary">
+                ({result.branch})
+              </span>
+            </h1>
+            <p className="mt-1 max-w-3xl text-sm text-text-secondary">
+              {result.narration.summary}
+            </p>
+          </div>
+          <div className="min-h-0 flex-1">
+            <DependencyGraph
+              key={`${result.owner}/${result.repo}/${result.branch}`}
+              graph={result.graph}
+            />
+          </div>
         </div>
-        <div className="min-h-0 flex-1">
-          <DependencyGraph
-            key={`${result.owner}/${result.repo}/${result.branch}`}
-            graph={result.graph}
-          />
-        </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-canvas">
-      <form onSubmit={handleSubmit} className="w-full max-w-md px-6">
-        <label className="mb-2 block font-mono text-sm text-text-secondary">
-          GitHub repository URL
-        </label>
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://github.com/owner/repo"
-          className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
-          required
-        />
-        <button
-          type="submit"
-          disabled={status === "loading"}
-          className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
-        >
-          {status === "loading" ? "Analyzing…" : "Analyze"}
-        </button>
-        {status === "error" && (
-          <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
-        )}
-      </form>
-    </div>
+    <>
+      <MobileNotice />
+      <div className="flex h-screen w-full items-center justify-center bg-canvas">
+        <form onSubmit={handleSubmit} className="w-full max-w-md px-6">
+          <label className="mb-2 block font-mono text-sm text-text-secondary">
+            GitHub repository URL
+          </label>
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://github.com/owner/repo"
+            className="w-full rounded-md border border-node-border bg-node px-3 py-2 font-mono text-sm text-text-primary outline-none focus:border-accent"
+            required
+          />
+          <button
+            type="submit"
+            disabled={status === "loading"}
+            className="mt-3 w-full rounded-md bg-accent px-3 py-2 font-mono text-sm font-semibold text-canvas disabled:opacity-50"
+          >
+            {status === "loading" ? "Analyzing…" : "Analyze"}
+          </button>
+          {status === "error" && (
+            <p className="mt-3 text-sm text-red-400">{errorMessage}</p>
+          )}
+        </form>
+      </div>
+    </>
   );
 }
